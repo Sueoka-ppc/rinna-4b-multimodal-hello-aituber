@@ -1,7 +1,7 @@
 import redis
 from aituber.app_streaming import (generate_from_api, reset_api,
                                    upload_image_from_api)
-from fastapi import FastAPI, File
+from fastapi import FastAPI, File,WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
