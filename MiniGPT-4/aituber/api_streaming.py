@@ -80,7 +80,21 @@ async def get_status():
     reset_api()
     upload_image_from_api(file)
     texts = [
-        'ゲームのプレイ画面。今の状況を説明して',
+        '   実況するゲームの概要：『Elite Dangerous』は、広大な宇宙を舞台にした大規模マルチプレイヤーオンラインゲーム（MMO）です。プレイヤーは宇宙船を操縦し、貿易、戦闘、探査など、様々な活動を通じて宇宙を自由に冒険できます。1984年の初代「Elite」から続くシリーズの最新作で、現代の世代に向けて、リアルな銀河系を再現したオープンワールド体験を提供しています。\
+            ゲームの特徴:\
+            自由な宇宙:\
+            プレイヤーは、広大な宇宙空間を自由に移動し、様々な星系や惑星を探索できます。\
+            多種多様なプレイスタイル:\
+            貿易、戦闘、探査、採掘など、自分の好みに合わせたプレイスタイルでゲームを楽しめます。\
+            宇宙船のカスタマイズ:\
+            多数の宇宙船が登場し、自由に改造やカスタマイズが可能です。\
+            大規模マルチプレイヤー:\
+            他のプレイヤーと協力したり、時には競い合ったりしながら、広大な宇宙を冒険できます。\
+            進化するストーリー:\
+            プレイヤーの行動がゲーム内の世界に影響を与え、ストーリーが進化していきます。\
+            ゲームの目的:\
+            ゲームに明確な目的はなく、プレイヤーは自由な目標を設定して宇宙を冒険できます。貿易で富を築いたり、戦闘で名を上げたり、宇宙の謎を解き明かしたりと、プレイヤー次第で様々な楽しみ方が可能です。\
+            Elite dangorousというゲームのプレイ画面。今の状況を説明して',
         # NOTE: 状況説明後、AITuberが何か付加的なコメントをランダムにコメントする
         [
             'このあとどうなると思いますか？',
@@ -102,51 +116,6 @@ async def get_status():
         ),
         media_type="application/json",
     )
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept() # Websocketを開通
-    try:
-        while True:
-            # 最新画像をMemcachedから読み取る
-            file = image_cache_client.get(IMAGE_KEY)
-            if not file:
-                print('Error: get memcache')
-                raise Exception('Error: get memcache')
-
-            # 履歴をリセットして新しい応答文を生成する
-            reset_api()
-            upload_image_from_api(file)
-            texts = [
-                'ゲームのプレイ画面。今の状況を説明して',
-                # NOTE: 状況説明後、AITuberが何か付加的なコメントをランダムにコメントする
-                [
-                    'このあとどうなると思いますか？',
-                    'あなたならどうしますか？',
-                ]
-            ]
-
-            def post_rule_process(text, output, messages):
-                # NOTE: このあとどうなると思いますか？という質問の場合は、応答文の最初に「この後は、」を付けている
-                # (ユーザには応答文だけ返るので、つけないと唐突な印象となり、つける少しうるさく感じる。もう少し自然な感じにしたい)
-                if 'このあとどうなると思いますか？' in text and not messages[-1][1]:
-                    output = "。この後は、" + output
-                print(output)
-                return output
-            message = {
-                "text": texts,
-                "role": "assistant",
-                "emotion": "neutral",
-                "type": "message"
-            }
-            ws.send(json.dumps(message))
-            """return StreamingResponse(
-                generate_from_api(
-                    texts, max_new_tokens=64, min_length=8, temperature=1, post_process=post_rule_process
-                ),
-                media_type="application/json",
-            )"""
-    except WebSocketDisconnect:
-        websocket.close()
 
 @app.post("/reset")
 async def reset():
