@@ -102,7 +102,51 @@ async def get_status():
         ),
         media_type="application/json",
     )
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept() # Websocketを開通
+    try:
+        while True:
+            # 最新画像をMemcachedから読み取る
+            file = image_cache_client.get(IMAGE_KEY)
+            if not file:
+                print('Error: get memcache')
+                raise Exception('Error: get memcache')
 
+            # 履歴をリセットして新しい応答文を生成する
+            reset_api()
+            upload_image_from_api(file)
+            texts = [
+                'ゲームのプレイ画面。今の状況を説明して',
+                # NOTE: 状況説明後、AITuberが何か付加的なコメントをランダムにコメントする
+                [
+                    'このあとどうなると思いますか？',
+                    'あなたならどうしますか？',
+                ]
+            ]
+
+            def post_rule_process(text, output, messages):
+                # NOTE: このあとどうなると思いますか？という質問の場合は、応答文の最初に「この後は、」を付けている
+                # (ユーザには応答文だけ返るので、つけないと唐突な印象となり、つける少しうるさく感じる。もう少し自然な感じにしたい)
+                if 'このあとどうなると思いますか？' in text and not messages[-1][1]:
+                    output = "。この後は、" + output
+                print(output)
+                return output
+            message = {
+                "text": texts,
+                "role": "assistant",
+                "emotion": "neutral",
+                "type": "message"
+            }
+            ws.send(json.dumps(message))
+            """return StreamingResponse(
+                generate_from_api(
+                    texts, max_new_tokens=64, min_length=8, temperature=1, post_process=post_rule_process
+                ),
+                media_type="application/json",
+            )"""
+    except WebSocketDisconnect:
+        websocket.close()
 
 @app.post("/reset")
 async def reset():
